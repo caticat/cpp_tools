@@ -1,14 +1,14 @@
 #include "stdafx.h"
-#include "MysqlProxy.h"
+#include "PMysql.h"
 #include "DBConfig.h"
 #pragma comment(lib,"libmysql.lib")
 
-bool MysqlProxy::Connect(const DBConfig& dbConfig)
+bool PMysql::Connect(const DBConfig& dbConfig)
 {
 	return Connect(dbConfig.m_host.c_str(),dbConfig.m_port,dbConfig.m_database.c_str(),dbConfig.m_name.c_str(),dbConfig.m_password.c_str(),dbConfig.m_charset.c_str());
 }
 
-bool MysqlProxy::Connect(const char* host, int port, const char* database, const char* name, const char* password, const char* charSet)
+bool PMysql::Connect(const char* host, int port, const char* database, const char* name, const char* password, const char* charSet)
 {
 	if ((host == NULL) || (database == NULL) || (name == NULL) || (password == NULL))
 		return false;
@@ -23,7 +23,7 @@ bool MysqlProxy::Connect(const char* host, int port, const char* database, const
 	return true;
 }
 
-bool MysqlProxy::Query(const char* sql)
+bool PMysql::Query(const char* sql)
 {
 	if (sql == NULL)
 		return false;
@@ -35,7 +35,7 @@ bool MysqlProxy::Query(const char* sql)
 	return true;
 }
 
-void MysqlProxy::StoreResult(tab_t& res)
+void PMysql::StoreResult(tab_t& res)
 {
 	res.clear();
 	MYSQL_RES* pRes = mysql_store_result(&mysql);
@@ -55,19 +55,19 @@ void MysqlProxy::StoreResult(tab_t& res)
 	}
 }
 
-void MysqlProxy::Close()
+void PMysql::Close()
 {
 	mysql_close(&mysql);
 }
 
-void MysqlProxy::SetCharSet(const char* charSet)
+void PMysql::SetCharSet(const char* charSet)
 {
 	if (charSet == NULL)
 		return;
 	mysql_set_character_set(&mysql,charSet);
 }
 
-void MysqlProxy::ShowError()
+void PMysql::ShowError()
 {
 	std::cout << mysql_error(&mysql) << std::endl;
 }

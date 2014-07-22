@@ -8,7 +8,7 @@ typedef tab_t::iterator itTab_t;
 
 struct DBConfig;
 
-class DLL_API MysqlProxy
+class DLL_API PMysql
 {
 public:
 	bool Connect(const DBConfig& dbConfig);

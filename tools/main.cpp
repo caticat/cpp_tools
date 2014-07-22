@@ -2,17 +2,12 @@
 #include <vector>
 #include <string>
 #include "plog.h"
-#include "MysqlProxy.h"
+#include "PMysql.h"
 
 using std::cout;
 using std::endl;
 using std::vector;
 using std::string;
-
-//typedef vector<vector<string>> mysqlResTab_t;
-//typedef vector<vector<string>>::iterator itMysqlResTab_t;
-//typedef vector<string> mysqlResRow_t;
-//typedef vector<string>::iterator itMysqlResRow_t;
 
 int main()
 {
@@ -25,7 +20,7 @@ int main()
 	*/
 
 	/* 数据库代理的使用
-	MysqlProxy db;
+	PMysql db;
 	if (!db.Connect("192.168.0.183",3306,"kuafu","root","","gbk"))
 	{
 		cout << "connect mysql error.\n";
