@@ -1,6 +1,6 @@
 #include "stdafx.h"
-#include "PMysql.h"
-#include "DBConfig.h"
+#include "pmysql.h"
+#include "dbconfig.h"
 #pragma comment(lib,"libmysql.lib")
 
 bool PMysql::Connect(const DBConfig& dbConfig)

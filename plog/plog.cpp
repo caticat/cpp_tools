@@ -1,6 +1,4 @@
-﻿#include "stdafx.h"
-
-#include "plog.h"
+﻿#include "plog.h"
 
 #include <iostream>
 #include <stdarg.h>
