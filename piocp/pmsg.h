@@ -3,6 +3,7 @@
 /*
 	网络数据处理类
 	支持类型：int8,int16,int32,int64,uint8,uint16,uint32,uint64,char*
+	注：当读取数据长度超过实际数据长度后，会直接返回，不会处理数据
 */
 
 /*
@@ -41,6 +42,7 @@ public:
 	inline void SetProto(uint16 proto); // 设置协议号
 	inline uint16 GetProto() const; // 获取协议号
 	inline uint16 GetPos() const; // 获取当前读位置
+	inline const std::string& GetData() const; // 获取所有数据
 	inline uint16 GetDataLen() const; // 获取数据长度
 	inline void ResetPos(); // 重置当前读取位置
 	inline void Reset(); // 重置当前数据信息

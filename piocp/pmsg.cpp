@@ -34,6 +34,11 @@ uint16 PMsg::GetPos() const
 	return m_pos;
 }
 
+const std::string& PMsg::GetData() const
+{
+	return m_msg;
+}
+
 uint16 PMsg::GetDataLen() const
 {
 	return *(uint16*)(m_msg.c_str());

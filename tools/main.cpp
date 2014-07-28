@@ -12,6 +12,8 @@ using std::endl;
 using std::vector;
 using std::string;
 
+void callBackFunc(char* data,uint16 dataLen);
+
 int main()
 {
 	/* log的使用
@@ -48,30 +50,6 @@ int main()
 	*/
 
 	/*
-	// 完成端口测试
-	PIOCP iocp;
-	iocp.SetPort(12345);
-	if (!iocp.Start())
-	{
-		printf_s("服务器启动失败！\n");
-		return 2;
-	}
-
-	// 主线程停止循环
-	string cmd = "";
-	while (true)
-	{
-		std::cin>>cmd;
-		if ((cmd == "quit") || (cmd == "exit")) // 退出程序
-		{
-			iocp.Stop(); // 关闭IOCP监听服务
-			printf_s("服务器关闭\n");
-			break;
-		}
-	}
-	*/
-
-	/*
 	// pmsg测试
 	PMsg pmsg;
 	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
@@ -93,5 +71,37 @@ int main()
 	cout << "d:" << (int)d << ",e:"<<e<<",f:"<<f<<",g:"<<g<<endl;
 	*/
 
+	/*
+	// 完成端口测试
+	PIOCP iocp;
+	if (!iocp.Start(12345,callBackFunc))
+	{
+		printf_s("服务器启动失败！\n");
+		return 2;
+	}
+
+	// 主线程停止循环
+	string cmd = "";
+	while (true)
+	{
+		std::cin>>cmd;
+		if ((cmd == "quit") || (cmd == "exit")) // 退出程序
+		{
+			iocp.Stop(); // 关闭IOCP监听服务
+			printf_s("服务器关闭\n");
+			break;
+		}
+	}
+	*/
+
 	return 0;
+}
+
+void callBackFunc(char* data,uint16 dataLen)
+{
+	PMsg pmsg(data,dataLen);
+	int32 id = 0;
+	string msg;
+	pmsg>>msg>>id>>id;
+	cout << "proto:" << pmsg.GetProto() << ",dataLen:" << dataLen << ",len:" << pmsg.GetDataLen() << ",data:" << msg << ",id:" << id << endl;
 }

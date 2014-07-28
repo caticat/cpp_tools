@@ -3,8 +3,7 @@
 /*
 	// 完成端口测试
 	PIOCP iocp;
-	iocp.SetPort(12345);
-	if (!iocp.Start())
+	if (!iocp.Start(12345))
 	{
 		printf_s("服务器启动失败！\n");
 		return 2;
@@ -22,6 +21,53 @@
 			break;
 		}
 	}
+*/
+
+/* 客户端例子
+#include "pmsg.h"
+#include <WinSock2.h>
+#include <iostream>
+#pragma comment(lib,"ws2_32.lib")
+#pragma comment(lib,"PIOCP.lib")
+
+using std::cout;
+using std::endl;
+
+void main()
+{
+WSAData wsaData;
+WSAStartup(MAKEWORD(2,2),&wsaData);
+
+SOCKET sock = socket(AF_INET,SOCK_STREAM,0);
+if (sock == INVALID_SOCKET)
+{
+cout << "1" << endl;
+return;
+}
+
+SOCKADDR_IN addr;
+memset(&addr,0,sizeof(SOCKADDR_IN));
+addr.sin_family = AF_INET;
+addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+addr.sin_port = htons(12345);
+
+if (connect(sock,(sockaddr*)&addr,sizeof(sockaddr)) == SOCKET_ERROR)
+{
+cout << "2" << endl;
+return;
+}
+
+PMsg msg;
+msg.SetProto(1);
+msg<<"abcdefg";
+const std::string& data = msg.GetData();
+cout << "dataLen:" << data.length() << endl;
+cout << "send:" << (int)send(sock,data.c_str(), data.length(),0) << endl;
+
+closesocket(sock);
+WSACleanup();
+cout << "end" << endl;
+}
 */
 
 #include <vector>
@@ -57,6 +103,7 @@ struct PER_IO_CONTEXT
 	SOCKET sock; // 这个网络操作所使用的socket
 	WSABUF wsaBuf; // WSA类型的缓冲区，用于给重叠操作传参数的
 	char cbuf[PIOCP_MAX_BUFFER_LEN]; // 这个是WSABUF里的具体字符的缓冲区
+	uint16 nbufLen; // 接收的数据的长度
 	PIOCP_OPERATION_TYPE opType; // 标识网络操作的类型（对应上面的枚举）
 
 	inline PER_IO_CONTEXT(); // 初始化
@@ -89,7 +136,7 @@ class PIOCP;
 struct THREADPARAMS_WORKER
 {
 	PIOCP* pPIOCP; // 主功能类指针
-	int nThreadNo; // 线程编号
+	uint32 nThreadNo; // 线程编号
 };
 
 class DLL_API PIOCP
@@ -98,11 +145,13 @@ public:
 	PIOCP();
 	~PIOCP();
 
+private:
+	typedef void(*callbackFunc_t)(char* data,uint16 dataLen);
+
 public:
-	bool Start(); // 启动网络模块
+	bool Start(uint16 port,callbackFunc_t callbackFunc); // 启动网络模块
 	void Stop(); // 停止网络模块
 	std::string GetLocalIP(); // 获得本地IP地址
-	void SetPort(int port); // 设置监听端口号
 
 private:
 	bool _LoadSocketLib(); // 加载socket库
@@ -110,6 +159,8 @@ private:
 	bool _InitializeIOCP(); // 初始化IOCP
 	bool _InitializeListenSocket(); // 初始化监听socket
 	void _DeInitialize(); // 释放资源
+	void _SetPort(uint16 port); // 设置监听端口号
+	void _SetCallbackFunction(callbackFunc_t callbackFunc); // 设置回调函数
 	bool _PostAccept(PER_IO_CONTEXT* pIoContext); // 投递accept请求
 	bool _PostRecv(PER_IO_CONTEXT* pIoContext); // 投递recv请求
 	bool _DoAccept(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext); // 有客户端连入的处理
@@ -120,7 +171,7 @@ private:
 	bool _AssociateWithIOCP(PER_SOCKET_CONTEXT* pSocketContext); // 将客户端连接绑定到完成端口中
 	bool _HandleError(PER_SOCKET_CONTEXT* pSocketContext,DWORD dwError); // 错误处理
 	static DWORD WINAPI _WorkerThread(LPVOID lpParam); // 线程函数，为IOCP请求服务的工作者线程
-	int _GetNoOfProcessor(); // 获得本机的处理器数量
+	uint16 _GetNoOfProcessor(); // 获得本机的处理器数量
 	bool _IsSocketAlive(SOCKET s); // 判断客户端socket是否有效(是否断开)
 
 private:
@@ -141,4 +192,5 @@ private:
 	PER_SOCKET_CONTEXT* m_pListenContext; // 监听socket的context信息
 	LPFN_ACCEPTEX m_lpfnAcceptEx; // AcceptEx的函数指针
 	LPFN_GETACCEPTEXSOCKADDRS m_lpfnGetAcceptExSockAddrs; // GetAcceptExSockAddrs的函数指针
+	callbackFunc_t m_pfnCallBackFunc; // 回调函数指针
 };

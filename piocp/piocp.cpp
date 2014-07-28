@@ -9,6 +9,7 @@ PER_IO_CONTEXT::PER_IO_CONTEXT()
 	sock = INVALID_SOCKET;
 	wsaBuf.buf = cbuf;
 	wsaBuf.len = PIOCP_MAX_BUFFER_LEN;
+	nbufLen = 0;
 	opType = NULL_POSTED;
 }
 
@@ -67,8 +68,8 @@ PIOCP::PIOCP() :
 				m_strIP(PIOCP_DEFAULT_IP),
 				m_nPort(PIOCP_DEFAULT_PORT),
 				m_lpfnAcceptEx(NULL),
-				m_lpfnGetAcceptExSockAddrs(NULL)
-
+				m_lpfnGetAcceptExSockAddrs(NULL),
+				m_pfnCallBackFunc(NULL)
 {
 	
 }
@@ -78,7 +79,7 @@ PIOCP::~PIOCP()
 	this->Stop();
 }
 
-bool PIOCP::Start()
+bool PIOCP::Start(uint16 port,callbackFunc_t callbackFunc)
 {
 	if (!_LoadSocketLib())
 	{
@@ -122,6 +123,9 @@ bool PIOCP::Start()
 	{
 		printf_s("Listen Socket初始化完毕\n");
 	}
+
+	_SetPort(port);
+	_SetCallbackFunction(callbackFunc);
 
 	printf_s("系统准备就绪，等待连接\n");
 	return true;
@@ -171,11 +175,6 @@ string PIOCP::GetLocalIP()
 	memmove(&inAddr,lpAddr,4);
 	m_strIP = inet_ntoa(inAddr);
 	return m_strIP;
-}
-
-void PIOCP::SetPort(int port)
-{
-	m_nPort = port;
 }
 
 bool PIOCP::_LoadSocketLib()
@@ -353,6 +352,16 @@ void PIOCP::_DeInitialize()
 	printf_s("释放资源完毕\n");
 }
 
+void PIOCP::_SetPort(uint16 port)
+{
+	m_nPort = port;
+}
+
+void PIOCP::_SetCallbackFunction(callbackFunc_t callbackFunc)
+{
+	m_pfnCallBackFunc = callbackFunc;
+}
+
 bool PIOCP::_PostAccept(PER_IO_CONTEXT* pIoContext)
 {
 	PIOCP_CHECK_BOOL_BOOL((INVALID_SOCKET != m_pListenContext->sock),"_PostAccept监听socket无效\n");
@@ -418,7 +427,7 @@ bool PIOCP::_DoAccept(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoCon
 	m_lpfnGetAcceptExSockAddrs(pIoContext->wsaBuf.buf,pIoContext->wsaBuf.len-((sizeof(SOCKADDR_IN)+16)*2),
 		sizeof(SOCKADDR_IN)+16,sizeof(SOCKADDR_IN)+16,(LPSOCKADDR*)&pServerAddr,&serverAddrLen,(LPSOCKADDR*)&pClientAddr,&clientAddrLen);
 
-	printf_s("客户端[%s:%d]连入,str:%s\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port),pIoContext->cbuf);
+	printf_s("客户端[%s:%d]连入\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
 	// TODO:PJ 数据处理没有做
 
 	// pSocketContext是listenSocket上的context，还需要监听下一个连接，所以需要新建一个socketContext对应新连入的socket
@@ -447,6 +456,9 @@ bool PIOCP::_DoAccept(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoCon
 
 	// 投递成功，将有效客户端信息添加到socketContextArr中统一管理
 	_AddSocketContext(pNewSocketContext);
+
+	// 回调函数调用
+	m_pfnCallBackFunc(pIoContext->wsaBuf.buf,pIoContext->nbufLen);
 	
 	// 将ListenSocket的ioContext重置，准备投递新的AcceptEx
 	pIoContext->ResetBuffer();
@@ -457,7 +469,10 @@ bool PIOCP::_DoRecv(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoConte
 {
 	// 取数据
 	SOCKADDR_IN* pClientAddr = &(pSocketContext->addr);
-	printf_s("收到[%s:%d]信息：%s\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port),pIoContext->wsaBuf.buf);
+	printf_s("收到[%s:%d]信息\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
+
+	// 回调函数调用
+	m_pfnCallBackFunc(pIoContext->wsaBuf.buf,pIoContext->nbufLen);
 
 	// 投递下一个WSARecv请求
 	return _PostRecv(pIoContext);
@@ -598,6 +613,7 @@ DWORD WINAPI PIOCP::_WorkerThread(LPVOID lpParam)
 			}
 			else
 			{
+				pIoContext->nbufLen = (uint16)dwBytesTransfered;
 				switch (pIoContext->opType)
 				{
 				case ACCEPT_POSTED:
@@ -630,11 +646,11 @@ DWORD WINAPI PIOCP::_WorkerThread(LPVOID lpParam)
 	return 0;
 }
 
-int PIOCP::_GetNoOfProcessor()
+uint16 PIOCP::_GetNoOfProcessor()
 {
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
-	return si.dwNumberOfProcessors;
+	return (uint16)si.dwNumberOfProcessors;
 }
 
 // 判断客户端Socket是否已经断开，否则在一个无效的Socket上投递WSARecv操作会出现异常
