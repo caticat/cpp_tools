@@ -5,6 +5,28 @@
 	支持类型：int8,int16,int32,int64,uint8,uint16,uint32,uint64,char*
 */
 
+/*
+	// pmsg测试
+	PMsg pmsg;
+	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
+	pmsg.SetProto(1);
+	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
+	int8 a = 1;
+	pmsg.Write(a);
+	int16 b = 2;
+	int32 c = 3;
+	pmsg<<b<<c<<"haha";
+	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
+	
+	int8 d = 0;
+	int16 e = 0;
+	int32 f = 0;
+	string g = "";
+	pmsg>>d>>e>>f>>g;
+	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
+	cout << "d:" << (int)d << ",e:"<<e<<",f:"<<f<<",g:"<<g<<endl;
+*/
+
 #include <string>
 
 #include "piocpdef.h"

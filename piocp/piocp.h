@@ -1,4 +1,29 @@
 ﻿#pragma once
+
+/*
+	// 完成端口测试
+	PIOCP iocp;
+	iocp.SetPort(12345);
+	if (!iocp.Start())
+	{
+		printf_s("服务器启动失败！\n");
+		return 2;
+	}
+
+	// 主线程停止循环
+	string cmd = "";
+	while (true)
+	{
+		std::cin>>cmd;
+		if ((cmd == "quit") || (cmd == "exit")) // 退出程序
+		{
+			iocp.Stop(); // 关闭IOCP监听服务
+			printf_s("服务器关闭\n");
+			break;
+		}
+	}
+*/
+
 #include <vector>
 #include <string>
 

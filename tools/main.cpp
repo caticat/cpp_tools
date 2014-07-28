@@ -71,6 +71,7 @@ int main()
 	}
 	*/
 
+	/*
 	// pmsg测试
 	PMsg pmsg;
 	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
@@ -90,6 +91,7 @@ int main()
 	pmsg>>d>>e>>f>>g;
 	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
 	cout << "d:" << (int)d << ",e:"<<e<<",f:"<<f<<",g:"<<g<<endl;
+	*/
 
 	return 0;
 }
