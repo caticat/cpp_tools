@@ -12,7 +12,7 @@ using std::endl;
 using std::vector;
 using std::string;
 
-void callBackFunc(char* data,uint16 dataLen);
+void callBackFunc(PER_SOCKET_CONTEXT* pPSock,char* data,uint16 dataLen);
 
 int main()
 {
@@ -71,7 +71,7 @@ int main()
 	cout << "d:" << (int)d << ",e:"<<e<<",f:"<<f<<",g:"<<g<<endl;
 	*/
 
-	/*
+	//*
 	// 完成端口测试
 	PIOCP iocp;
 	if (!iocp.Start(12345,callBackFunc))
@@ -92,16 +92,17 @@ int main()
 			break;
 		}
 	}
-	*/
+	//*/
 
 	return 0;
 }
 
-void callBackFunc(char* data,uint16 dataLen)
+void callBackFunc(PER_SOCKET_CONTEXT* pPSock,char* data,uint16 dataLen)
 {
 	PMsg pmsg(data,dataLen);
 	int32 id = 0;
 	string msg;
 	pmsg>>msg>>id>>id;
 	cout << "proto:" << pmsg.GetProto() << ",dataLen:" << dataLen << ",len:" << pmsg.GetDataLen() << ",data:" << msg << ",id:" << id << endl;
+	pPSock->Send(data,dataLen);
 }

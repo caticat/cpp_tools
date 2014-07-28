@@ -67,7 +67,6 @@ private:
 	std::string m_msg; // 数据
 	uint16 m_pos; // 当前读取位置
 	uint16 m_msgLen; // 当前数据长度
-	uint16 m_proto; // 协议号
 
 private:
 	const static uint8 m_headLen = 4; // 协议头长度 协议头包括协议头外数据长度和协议号

@@ -3,35 +3,50 @@
 /*
 	// 完成端口测试
 	PIOCP iocp;
-	if (!iocp.Start(12345))
+	if (!iocp.Start(12345,callBackFunc))
 	{
-		printf_s("服务器启动失败！\n");
-		return 2;
+	printf_s("服务器启动失败！\n");
+	return 2;
 	}
 
 	// 主线程停止循环
 	string cmd = "";
 	while (true)
 	{
-		std::cin>>cmd;
-		if ((cmd == "quit") || (cmd == "exit")) // 退出程序
-		{
-			iocp.Stop(); // 关闭IOCP监听服务
-			printf_s("服务器关闭\n");
-			break;
-		}
+	std::cin>>cmd;
+	if ((cmd == "quit") || (cmd == "exit")) // 退出程序
+	{
+	iocp.Stop(); // 关闭IOCP监听服务
+	printf_s("服务器关闭\n");
+	break;
+	}
+	}
+
+
+	void callBackFunc(PER_SOCKET_CONTEXT* pPSock,char* data,uint16 dataLen)
+	{
+	PMsg pmsg(data,dataLen);
+	int32 id = 0;
+	string msg;
+	pmsg>>msg>>id>>id;
+	cout << "proto:" << pmsg.GetProto() << ",dataLen:" << dataLen << ",len:" << pmsg.GetDataLen() << ",data:" << msg << ",id:" << id << endl;
+	pPSock->Send(data,dataLen);
 	}
 */
 
-/* 客户端例子
+/* 客户端例子 接收和发送数据
 #include "pmsg.h"
 #include <WinSock2.h>
 #include <iostream>
+#include <string>
+//#include "tmp.h"
+
 #pragma comment(lib,"ws2_32.lib")
 #pragma comment(lib,"PIOCP.lib")
 
 using std::cout;
 using std::endl;
+using std::string;
 
 void main()
 {
@@ -57,12 +72,43 @@ cout << "2" << endl;
 return;
 }
 
+int32 id = 1001;
 PMsg msg;
-msg.SetProto(1);
-msg<<"abcdefg";
+msg.SetProto(11);
+msg<<"abcdefg"<<id;
 const std::string& data = msg.GetData();
-cout << "dataLen:" << data.length() << endl;
 cout << "send:" << (int)send(sock,data.c_str(), data.length(),0) << endl;
+
+// 主线程停止循环
+//string cmd = "";
+//while (true)
+string cmd = "";
+while (true)
+{
+{
+char buf[256];
+int ret = recv(sock,buf,256,0);
+if (ret == SOCKET_ERROR)
+{
+cout << "socket error" << endl;
+return;
+}
+PMsg msg2(buf,ret);
+string aa;
+int32 id2;
+msg2>>aa>>id2;
+cout << "buf:" << msg2.GetProto() << ",msg:" << aa << ",id:" << id2 << endl;
+}
+
+std::cin>>cmd;
+if ((cmd == "quit") || (cmd == "exit")) // 退出程序
+{
+printf_s("关闭\n");
+break;
+}
+
+cout << "send:" << (int)send(sock,data.c_str(), data.length(),0) << endl;
+}
 
 closesocket(sock);
 WSACleanup();
@@ -112,16 +158,18 @@ struct PER_IO_CONTEXT
 	inline void ResetBuffer(); // 重置缓冲区内容
 };
 
+class PIOCP;
 // 单句柄数据结构体定义（用于每一个完成端口，也就是每一个socket的参数）
-struct PER_SOCKET_CONTEXT
+struct DLL_API PER_SOCKET_CONTEXT
 {
 	typedef std::vector<PER_IO_CONTEXT*> ioContextArr_t;
 	typedef ioContextArr_t::iterator itIoContextArr_t;
-	//template class DLL_API std::allocator<PER_IO_CONTEXT*>;
-	//template class DLL_API std::vector<PER_IO_CONTEXT*,std::allocator<PER_IO_CONTEXT*>>;
+	template class DLL_API std::allocator<PER_IO_CONTEXT*>;
+	template class DLL_API std::vector<PER_IO_CONTEXT*,std::allocator<PER_IO_CONTEXT*>>;
 
 	SOCKET sock; // 每一个客户端连接的socket
 	SOCKADDR_IN addr; // 客户端地址
+	PIOCP* pPIOCP; // 主功能类指针
 	ioContextArr_t ioContextArr; // 客户端网络操作上下文数据（对于每一个客户端socket，是可以在上面同时投递多个IO请求的）
 
 	inline PER_SOCKET_CONTEXT();
@@ -129,9 +177,9 @@ struct PER_SOCKET_CONTEXT
 
 	inline PER_IO_CONTEXT* GetNewIoContext(); // 获取一个新的IoContext
 	inline void RemoveIoContext(PER_IO_CONTEXT* pIoContext); // 从数组中移除一个指定的IoContext
+	inline void Send(const char* data,uint16 dataLen); // 发送数据
 };
 
-class PIOCP;
 // 工作线程参数
 struct THREADPARAMS_WORKER
 {
@@ -146,12 +194,13 @@ public:
 	~PIOCP();
 
 private:
-	typedef void(*callbackFunc_t)(char* data,uint16 dataLen);
+	typedef void(*callbackFunc_t)(PER_SOCKET_CONTEXT* pPSock,char* data,uint16 dataLen);
 
 public:
 	bool Start(uint16 port,callbackFunc_t callbackFunc); // 启动网络模块
 	void Stop(); // 停止网络模块
 	std::string GetLocalIP(); // 获得本地IP地址
+	void Send(PER_SOCKET_CONTEXT* pSocketContext,PER_IO_CONTEXT* pIoContext); // 发送数据
 
 private:
 	bool _LoadSocketLib(); // 加载socket库
@@ -165,6 +214,7 @@ private:
 	bool _PostRecv(PER_IO_CONTEXT* pIoContext); // 投递recv请求
 	bool _DoAccept(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext); // 有客户端连入的处理
 	bool _DoRecv(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext); // 有数据到达时的处理
+	bool _DoSend(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext); // 发送数据到客户端
 	void _AddSocketContext(PER_SOCKET_CONTEXT* pSocketContext); // 存储玩家连接信息
 	void _RemoveSocketContext(PER_SOCKET_CONTEXT* pSocketContext); // 移除玩家连接信息
 	void _ClearSocketContext(); // 清空客户端连接信息

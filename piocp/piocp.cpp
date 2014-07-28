@@ -27,6 +27,7 @@ PER_SOCKET_CONTEXT::PER_SOCKET_CONTEXT()
 {
 	sock = INVALID_SOCKET;
 	memset(&addr,0,sizeof(addr));
+	pPIOCP = NULL;
 }
 
 PER_SOCKET_CONTEXT::~PER_SOCKET_CONTEXT()
@@ -58,6 +59,20 @@ void PER_SOCKET_CONTEXT::RemoveIoContext(PER_IO_CONTEXT* pIoContext)
 			break;
 		}
 	}
+}
+
+void PER_SOCKET_CONTEXT::Send(const char* data,uint16 dataLen)
+{
+	PIOCP_CHECK_POINTER(data,"Send data空指针\n");
+	PIOCP_CHECK_POINTER(pPIOCP,"Send pPIOCP空指针\n");
+	if (dataLen > PIOCP_MAX_BUFFER_LEN)
+		return;
+	PER_IO_CONTEXT* pIoContext = GetNewIoContext();
+	pIoContext->opType = SEND_POSTED;
+	memcpy_s(pIoContext->cbuf,PIOCP_MAX_BUFFER_LEN,data,dataLen);
+	pIoContext->wsaBuf.len = dataLen;
+	pIoContext->nbufLen = dataLen;
+	pPIOCP->Send(this,pIoContext);
 }
 
 PIOCP::PIOCP() : 
@@ -177,6 +192,26 @@ string PIOCP::GetLocalIP()
 	return m_strIP;
 }
 
+void PIOCP::Send(PER_SOCKET_CONTEXT* pSocketContext,PER_IO_CONTEXT* pIoContext)
+{
+	PIOCP_CHECK_POINTER(pSocketContext,"Send pSocketContext空指针\n");
+	PIOCP_CHECK_POINTER(pIoContext,"Send pIoContext空指针\n");
+
+	SOCKADDR_IN* pClientAddr = &(pSocketContext->addr);
+	int ret = WSASend(pSocketContext->sock,&pIoContext->wsaBuf,1,(LPDWORD)&pIoContext->nbufLen,0,&pIoContext->overlapped,NULL);
+	if (ret == SOCKET_ERROR)
+	{
+		int errorNo = WSAGetLastError();
+		if (errorNo != WSA_IO_PENDING)
+		{
+			pSocketContext->RemoveIoContext(pIoContext);
+			printf_s("收到[%s:%d]发送消息出错，错误码：%d\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port),errorNo);
+			return;
+		}
+	}
+	printf_s("[%s:%d]发送消息完成\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
+}
+
 bool PIOCP::_LoadSocketLib()
 {
 	WSADATA wsaData;
@@ -244,6 +279,9 @@ bool PIOCP::_InitializeListenSocket()
 	{
 		printf_s("将ListenSocket绑定至完成端口成功。\n");
 	}
+
+	// 设置监听上下文网络类参数
+	m_pListenContext->pPIOCP = this;
 
 	// 服务器监听地址端口设置
 	SOCKADDR_IN serverAddr;
@@ -434,6 +472,7 @@ bool PIOCP::_DoAccept(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoCon
 	PER_SOCKET_CONTEXT* pNewSocketContext = new PER_SOCKET_CONTEXT;
 	pNewSocketContext->sock = pIoContext->sock;
 	memcpy(&(pNewSocketContext->addr),pClientAddr,sizeof(SOCKADDR_IN));
+	pNewSocketContext->pPIOCP = this;
 
 	// 将新连入的socket绑定完成端口
 	if (!_AssociateWithIOCP(pNewSocketContext))
@@ -458,7 +497,7 @@ bool PIOCP::_DoAccept(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoCon
 	_AddSocketContext(pNewSocketContext);
 
 	// 回调函数调用
-	m_pfnCallBackFunc(pIoContext->wsaBuf.buf,pIoContext->nbufLen);
+	m_pfnCallBackFunc(pNewSocketContext,pIoContext->wsaBuf.buf,pIoContext->nbufLen);
 	
 	// 将ListenSocket的ioContext重置，准备投递新的AcceptEx
 	pIoContext->ResetBuffer();
@@ -472,10 +511,34 @@ bool PIOCP::_DoRecv(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoConte
 	printf_s("收到[%s:%d]信息\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
 
 	// 回调函数调用
-	m_pfnCallBackFunc(pIoContext->wsaBuf.buf,pIoContext->nbufLen);
+	m_pfnCallBackFunc(pSocketContext,pIoContext->wsaBuf.buf,pIoContext->nbufLen);
 
 	// 投递下一个WSARecv请求
 	return _PostRecv(pIoContext);
+}
+
+bool PIOCP::_DoSend(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext)
+{
+	PIOCP_CHECK_POINTER_BOOL(pSocketContext,"_DoSend参数pSocketContext空指针\n");
+	PIOCP_CHECK_POINTER_BOOL(pIoContext,"_DoSend参数pIoContext空指针\n");
+
+	// 释放资源
+	pSocketContext->RemoveIoContext(pIoContext);
+
+	// 提示信息
+	SOCKADDR_IN* pClientAddr = &(pSocketContext->addr);
+	printf_s("发送[%s:%d]信息完成\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
+
+	return true;
+
+	// 这个函数的用法，我应该是写错了。
+	//BOOL res = WSAGetOverlappedResult(pSocketContext->sock,&pIoContext->overlapped,(LPDWORD)&pIoContext->nbufLen,TRUE,NULL);
+	//printf_s("send:%d,len:%d\n",pIoContext->nbufLen,pIoContext->nbufLen);
+	//if (res == FALSE)
+	//{
+	//	printf_s("lasterror:%d\n",WSAGetLastError());
+	//	return false;
+	//}
 }
 
 void PIOCP::_AddSocketContext(PER_SOCKET_CONTEXT* pSocketContext)
@@ -628,7 +691,7 @@ DWORD WINAPI PIOCP::_WorkerThread(LPVOID lpParam)
 					}
 				case SEND_POSTED:
 					{
-						// TODO:PJ 这里没有写
+						pPIOCP->_DoSend(pSocketContext,pIoContext);
 						break;
 					}
 				default:

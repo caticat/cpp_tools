@@ -2,8 +2,7 @@
 
 PMsg::PMsg() : m_msg(""),
 	m_pos(m_headLen),
-	m_msgLen(m_headLen),
-	m_proto(0)
+	m_msgLen(m_headLen)
 {
 	Write((uint32)0); // 将协议头清零
 	//*(uint16*)(m_msg.c_str()) = (uint16)0;
@@ -12,21 +11,19 @@ PMsg::PMsg() : m_msg(""),
 
 PMsg::PMsg(const char* msg,int16 msgLen) : m_msg(""),
 	m_pos(m_headLen),
-	m_msgLen(m_headLen),
-	m_proto(0)
+	m_msgLen(m_headLen)
 {
 	_WriteData(msg,msgLen);
 }
 
 void PMsg::SetProto(uint16 proto)
 {
-	m_proto = proto;
-	*((uint16*)(m_msg.c_str())+1) = m_proto;
+	*((uint16*)(m_msg.c_str())+1) = proto;
 }
 
 uint16 PMsg::GetProto() const
 {
-	return m_proto;
+	return *((uint16*)(m_msg.c_str())+1);
 }
 
 uint16 PMsg::GetPos() const
@@ -54,7 +51,6 @@ void PMsg::Reset()
 	m_msg = "";
 	m_pos = m_headLen;
 	m_msgLen = m_headLen;
-	m_proto = 0;
 	Write((uint32)0);
 }
 
