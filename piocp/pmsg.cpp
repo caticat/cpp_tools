@@ -15,7 +15,7 @@ PMsg::PMsg(const char* msg,int16 msgLen) : m_msg(""),
 	m_msgLen(m_headLen),
 	m_proto(0)
 {
-	WriteData(msg,msgLen);
+	_WriteData(msg,msgLen);
 }
 
 void PMsg::SetProto(uint16 proto)
@@ -51,4 +51,10 @@ void PMsg::Reset()
 	m_msgLen = m_headLen;
 	m_proto = 0;
 	Write((uint32)0);
+}
+
+void PMsg::_WriteData(const void* pData,uint16 dataLen)
+{
+	m_msg.insert(m_msg.length(),(char*)pData,dataLen);
+	*(uint16*)(m_msg.c_str()) = (uint16)m_msg.length()-m_headLen; // 更新长度
 }

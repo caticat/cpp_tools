@@ -36,9 +36,8 @@ public:
 	template <typename T>
 	void Write(uint16 pos,const T t); // 在某个位置写入某个数据
 
-
 private:
-	void WriteData(const void* pData,uint16 dataLen); // 写数据
+	void _WriteData(const void* pData,uint16 dataLen); // 写数据
 
 private:
 	std::string m_msg; // 数据
@@ -87,7 +86,7 @@ PMsg& PMsg::operator>>(T& t)
 template <typename T>
 void PMsg::Write(const T t)
 {
-	WriteData(&t,sizeof(T));
+	_WriteData(&t,sizeof(T));
 }
 
 template<>
@@ -96,7 +95,7 @@ void PMsg::Write <const char*> (const char* t) // 字符串写入特例化
 	uint16 sLen = (uint16)strlen(t);
 	Write(sLen);
 	if (sLen > 0)
-		WriteData(t,sLen);
+		_WriteData(t,sLen);
 }
 
 template <typename T>
@@ -124,10 +123,4 @@ void PMsg::Write <const char*> (uint16 pos,const char* t)
 		return;
 	char* p = (char*)(m_msg.c_str()+m_pos);
 	memcpy(p,&t,lenT);
-}
-
-void PMsg::WriteData(const void* pData,uint16 dataLen)
-{
-	m_msg.insert(m_msg.length(),(char*)pData,dataLen);
-	*(uint16*)(m_msg.c_str()) = (uint16)m_msg.length()-m_headLen; // 更新长度
 }
