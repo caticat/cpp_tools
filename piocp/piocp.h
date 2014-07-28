@@ -1,6 +1,10 @@
 ﻿#pragma once
 
 /*
+	完成端口通信工具类
+	注：发送接收均异步非阻塞，发送部分WSASend的异常处理没有做，数据量过多可能会有问题。
+*/
+/*
 	// 完成端口测试
 	PIOCP iocp;
 	if (!iocp.Start(12345,callBackFunc))
