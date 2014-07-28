@@ -1,5 +1,11 @@
 ﻿#pragma once
 
+#ifdef DLL_EXPORT
+#define DLL_API __declspec(dllexport)
+#else
+#define DLL_API __declspec(dllimport)
+#endif // DLL_EXPORT
+
 #define RELEASE(x) {if(x!=NULL){delete x;x=NULL;}} // 释放指针
 #define RELEASE_ARR(x) {if(x!=NULL){delete[] x;x=NULL;}} // 释放指针数组
 #define RELEASE_HANDLE(x) {if(x!=NULL && x!=INVALID_HANDLE_VALUE){CloseHandle(x);x=NULL;}} // 释放句柄

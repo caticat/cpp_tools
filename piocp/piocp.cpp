@@ -417,10 +417,7 @@ bool PIOCP::_DoAccept(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoCon
 	// 获取客户端、服务器地址信息，同时获取客户端发来的第一组数据
 	m_lpfnGetAcceptExSockAddrs(pIoContext->wsaBuf.buf,pIoContext->wsaBuf.len-((sizeof(SOCKADDR_IN)+16)*2),
 		sizeof(SOCKADDR_IN)+16,sizeof(SOCKADDR_IN)+16,(LPSOCKADDR*)&pServerAddr,&serverAddrLen,(LPSOCKADDR*)&pClientAddr,&clientAddrLen);
-	if (ntohs(pClientAddr->sin_port) == 0)
-	{
-		printf_s("111\n");
-	}
+
 	printf_s("客户端[%s:%d]连入,str:%s\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port),pIoContext->cbuf);
 	// TODO:PJ 数据处理没有做
 

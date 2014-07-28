@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include "piocp.h"
+#include "pmsg.h"
 #include "plog.h"
 #include "pmysql.h"
 #include "pjson.h"
@@ -46,6 +47,7 @@ int main()
 	db.Close();
 	*/
 
+	/*
 	// 完成端口测试
 	PIOCP iocp;
 	iocp.SetPort(12345);
@@ -67,6 +69,27 @@ int main()
 			break;
 		}
 	}
+	*/
+
+	// pmsg测试
+	PMsg pmsg;
+	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
+	pmsg.SetProto(1);
+	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
+	int8 a = 1;
+	pmsg.Write(a);
+	int16 b = 2;
+	int32 c = 3;
+	pmsg<<b<<c<<"haha";
+	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
+	
+	int8 d = 0;
+	int16 e = 0;
+	int32 f = 0;
+	string g = "";
+	pmsg>>d>>e>>f>>g;
+	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
+	cout << "d:" << (int)d << ",e:"<<e<<",f:"<<f<<",g:"<<g<<endl;
 
 	return 0;
 }

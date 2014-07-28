@@ -8,12 +8,6 @@
 
 #include "piocpdef.h"
 
-#ifdef DLL_EXPORT
-#define DLL_API __declspec(dllexport)
-#else
-#define DLL_API __declspec(dllimport)
-#endif // DLL_EXPORT
-
 #define PIOCP_MAX_BUFFER_LEN 8192 // 默认缓冲区长度 1024*8
 #define PIOCP_DEFAULT_IP "127.0.0.1" // 默认IP
 #define PIOCP_DEFAULT_PORT 12345 // 默认端口号
