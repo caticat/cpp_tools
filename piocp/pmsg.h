@@ -2,7 +2,7 @@
 
 /*
 	网络数据处理类
-	支持类型：int8,int16,int32,int64,uint8,uint16,uint32,uint64,char*
+	支持类型：int8,int16,int32,int64,uint8,uint16,uint32,uint64,char*,string
 	注：当读取数据长度超过实际数据长度后，会直接返回，不会处理数据
 */
 
@@ -55,7 +55,7 @@ public:
 	template <typename T>
 	void Write(const T t); // 写入某个类型的数据
 	template <typename T>
-	PMsg& operator<<(T& t); // 写入某个类型的数据
+	PMsg& operator<<(const T t); // 写入某个类型的数据
 
 	template <typename T>
 	void Write(uint16 pos,const T t); // 在某个位置写入某个数据
@@ -121,8 +121,17 @@ void PMsg::Write <const char*> (const char* t) // 字符串写入特例化
 		_WriteData(t,sLen);
 }
 
+template<>
+void PMsg::Write <std::string> (std::string t) // 字符串写入特例化
+{
+	uint16 sLen = (uint16)t.length();
+	Write(sLen);
+	if (sLen > 0)
+		_WriteData(t.c_str(),sLen);
+}
+
 template <typename T>
-PMsg& PMsg::operator<<(T& t)
+PMsg& PMsg::operator<<(const T t)
 {
 	Write(t);
 	return *this;

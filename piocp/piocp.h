@@ -7,7 +7,7 @@
 /*
 	// 完成端口测试
 	PIOCP iocp;
-	if (!iocp.Start(12345,callBackFunc))
+	if (!iocp.Start(12345,callBackFunc,onCloseFunc))
 	{
 	printf_s("服务器启动失败！\n");
 	return 2;
@@ -35,6 +35,11 @@
 	pmsg>>msg>>id>>id;
 	cout << "proto:" << pmsg.GetProto() << ",dataLen:" << dataLen << ",len:" << pmsg.GetDataLen() << ",data:" << msg << ",id:" << id << endl;
 	pPSock->Send(data,dataLen);
+	}
+
+	void onCloseFunc(PSocket* pPSock,uint16 closeType)
+	{
+	printf_s("客户端主动对出了，sock：%d,closeType:%d\n",pPSock->sock,closeType);
 	}
 */
 
@@ -184,6 +189,8 @@ struct DLL_API PER_SOCKET_CONTEXT
 	inline void Send(const char* data,uint16 dataLen); // 发送数据
 };
 
+typedef PER_SOCKET_CONTEXT PSocket; // 方便调用
+
 // 工作线程参数
 struct THREADPARAMS_WORKER
 {
@@ -199,9 +206,10 @@ public:
 
 private:
 	typedef void(*callbackFunc_t)(PER_SOCKET_CONTEXT* pPSock,char* data,uint16 dataLen);
+	typedef void(*onCloseFunc_t)(PER_SOCKET_CONTEXT* pPSock,uint16 closeType);
 
 public:
-	bool Start(uint16 port,callbackFunc_t callbackFunc); // 启动网络模块
+	bool Start(uint16 port,callbackFunc_t callbackFunc,onCloseFunc_t onCloseFunc); // 启动网络模块
 	void Stop(); // 停止网络模块
 	std::string GetLocalIP(); // 获得本地IP地址
 	void Send(PER_SOCKET_CONTEXT* pSocketContext,PER_IO_CONTEXT* pIoContext); // 发送数据
@@ -214,11 +222,13 @@ private:
 	void _DeInitialize(); // 释放资源
 	void _SetPort(uint16 port); // 设置监听端口号
 	void _SetCallbackFunction(callbackFunc_t callbackFunc); // 设置回调函数
+	void _SetOnCloseFunction(onCloseFunc_t onCloseFunc); // 设置关闭回调函数
 	bool _PostAccept(PER_IO_CONTEXT* pIoContext); // 投递accept请求
 	bool _PostRecv(PER_IO_CONTEXT* pIoContext); // 投递recv请求
 	bool _DoAccept(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext); // 有客户端连入的处理
 	bool _DoRecv(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext); // 有数据到达时的处理
 	bool _DoSend(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoContext); // 发送数据到客户端
+	bool _DoClose(PER_SOCKET_CONTEXT* pSocketContext, PIOCP_CLOSETYPE closeType); // 客户端退出
 	void _AddSocketContext(PER_SOCKET_CONTEXT* pSocketContext); // 存储玩家连接信息
 	void _RemoveSocketContext(PER_SOCKET_CONTEXT* pSocketContext); // 移除玩家连接信息
 	void _ClearSocketContext(); // 清空客户端连接信息
@@ -247,4 +257,5 @@ private:
 	LPFN_ACCEPTEX m_lpfnAcceptEx; // AcceptEx的函数指针
 	LPFN_GETACCEPTEXSOCKADDRS m_lpfnGetAcceptExSockAddrs; // GetAcceptExSockAddrs的函数指针
 	callbackFunc_t m_pfnCallBackFunc; // 回调函数指针
+	onCloseFunc_t m_pfnOnCloseFunc; // 关闭回调函数指针
 };

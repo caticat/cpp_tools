@@ -94,7 +94,7 @@ PIOCP::~PIOCP()
 	this->Stop();
 }
 
-bool PIOCP::Start(uint16 port,callbackFunc_t callbackFunc)
+bool PIOCP::Start(uint16 port,callbackFunc_t callbackFunc,onCloseFunc_t onCloseFunc)
 {
 	if (!_LoadSocketLib())
 	{
@@ -141,6 +141,7 @@ bool PIOCP::Start(uint16 port,callbackFunc_t callbackFunc)
 
 	_SetPort(port);
 	_SetCallbackFunction(callbackFunc);
+	_SetOnCloseFunction(onCloseFunc);
 
 	printf_s("系统准备就绪，等待连接\n");
 	return true;
@@ -209,7 +210,7 @@ void PIOCP::Send(PER_SOCKET_CONTEXT* pSocketContext,PER_IO_CONTEXT* pIoContext)
 			return;
 		}
 	}
-	printf_s("[%s:%d]发送消息完成\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
+	//printf_s("[%s:%d]发送消息完成\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
 }
 
 bool PIOCP::_LoadSocketLib()
@@ -400,6 +401,11 @@ void PIOCP::_SetCallbackFunction(callbackFunc_t callbackFunc)
 	m_pfnCallBackFunc = callbackFunc;
 }
 
+void PIOCP::_SetOnCloseFunction(onCloseFunc_t onCloseFunc)
+{
+	m_pfnOnCloseFunc = onCloseFunc;
+}
+
 bool PIOCP::_PostAccept(PER_IO_CONTEXT* pIoContext)
 {
 	PIOCP_CHECK_BOOL_BOOL((INVALID_SOCKET != m_pListenContext->sock),"_PostAccept监听socket无效\n");
@@ -508,7 +514,7 @@ bool PIOCP::_DoRecv(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoConte
 {
 	// 取数据
 	SOCKADDR_IN* pClientAddr = &(pSocketContext->addr);
-	printf_s("收到[%s:%d]信息\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
+	//printf_s("收到[%s:%d]信息\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
 
 	// 回调函数调用
 	m_pfnCallBackFunc(pSocketContext,pIoContext->wsaBuf.buf,pIoContext->nbufLen);
@@ -527,7 +533,7 @@ bool PIOCP::_DoSend(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoConte
 
 	// 提示信息
 	SOCKADDR_IN* pClientAddr = &(pSocketContext->addr);
-	printf_s("发送[%s:%d]信息完成\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
+	//printf_s("发送[%s:%d]信息完成\n",inet_ntoa(pClientAddr->sin_addr),ntohs(pClientAddr->sin_port));
 
 	return true;
 
@@ -539,6 +545,12 @@ bool PIOCP::_DoSend(PER_SOCKET_CONTEXT* pSocketContext, PER_IO_CONTEXT* pIoConte
 	//	printf_s("lasterror:%d\n",WSAGetLastError());
 	//	return false;
 	//}
+}
+
+bool PIOCP::_DoClose(PER_SOCKET_CONTEXT* pSocketContext, PIOCP_CLOSETYPE closeType)
+{
+	m_pfnOnCloseFunc(pSocketContext,closeType);
+	return true;
 }
 
 void PIOCP::_AddSocketContext(PER_SOCKET_CONTEXT* pSocketContext)
@@ -605,7 +617,8 @@ bool PIOCP::_HandleError(PER_SOCKET_CONTEXT* pSocketContext,DWORD dwError)
 	{
 		if (!_IsSocketAlive(pSocketContext->sock)) // 客户端连接断开了
 		{
-			printf_s("检测到客户端异常退出\n");
+			printf_s("1检测到客户端异常退出，错误码：%d\n",dwError);
+			_DoClose(pSocketContext,CLOSETYPE_ERROR);
 			_RemoveSocketContext(pSocketContext);
 			return true;
 		}
@@ -617,7 +630,8 @@ bool PIOCP::_HandleError(PER_SOCKET_CONTEXT* pSocketContext,DWORD dwError)
 	}
 	else if (ERROR_NETNAME_DELETED == dwError) // 客户端异常退出了
 	{
-		printf_s("检测到客户端异常退出\n");
+		printf_s("2检测到客户端异常退出，错误码：%d\n",dwError);
+		_DoClose(pSocketContext,CLOSETYPE_ERROR);
 		_RemoveSocketContext(pSocketContext);
 		return true;
 	}
@@ -671,6 +685,7 @@ DWORD WINAPI PIOCP::_WorkerThread(LPVOID lpParam)
 			if ((0 == dwBytesTransfered) && (RECV_POSTED == pIoContext->opType || SEND_POSTED == pIoContext->opType)) // 客户端正常退出，主动断开连接时调用
 			{
 				printf_s("客户端[%s:%d]断开连接\n",inet_ntoa(pSocketContext->addr.sin_addr),htons(pSocketContext->addr.sin_port));
+				pPIOCP->_DoClose(pSocketContext,CLOSETYPE_NORMAL);
 				pPIOCP->_RemoveSocketContext(pSocketContext);
 				continue;
 			}

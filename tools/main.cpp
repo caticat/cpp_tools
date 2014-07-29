@@ -13,6 +13,7 @@ using std::vector;
 using std::string;
 
 void callBackFunc(PER_SOCKET_CONTEXT* pPSock,char* data,uint16 dataLen);
+void onCloseFunc(PSocket* pPSock,uint16 closeType);
 
 int main()
 {
@@ -69,12 +70,23 @@ int main()
 	pmsg>>d>>e>>f>>g;
 	cout << "proto:" << pmsg.GetProto() << ";len:" << pmsg.GetDataLen() << ";pos:" << pmsg.GetPos() << endl;
 	cout << "d:" << (int)d << ",e:"<<e<<",f:"<<f<<",g:"<<g<<endl;
-	*/
+	//*/
 
-	//*
+	//* pmsg字符串测试
+	PMsg pmsg;
+	string b = "11111";
+	pmsg<<"aaaa"<<b.c_str()<<b;
+	string a,c,d;
+	pmsg>>a>>c>>d;
+	cout << a << endl;
+	cout << c << endl;
+	cout << d << endl;
+	//*/
+
+	/*
 	// 完成端口测试
 	PIOCP iocp;
-	if (!iocp.Start(12345,callBackFunc))
+	if (!iocp.Start(12345,callBackFunc,onCloseFunc))
 	{
 		printf_s("服务器启动失败！\n");
 		return 2;
@@ -105,4 +117,9 @@ void callBackFunc(PER_SOCKET_CONTEXT* pPSock,char* data,uint16 dataLen)
 	pmsg>>msg>>id>>id;
 	cout << "proto:" << pmsg.GetProto() << ",dataLen:" << dataLen << ",len:" << pmsg.GetDataLen() << ",data:" << msg << ",id:" << id << endl;
 	pPSock->Send(data,dataLen);
+}
+
+void onCloseFunc(PSocket* pPSock,uint16 closeType)
+{
+	printf_s("客户端主动对出了，sock：%d,closeType:%d\n",pPSock->sock,closeType);
 }
