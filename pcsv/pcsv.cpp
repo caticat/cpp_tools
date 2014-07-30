@@ -21,7 +21,7 @@ bool PCsv::Load(const char* path)
 
 	int bufLen = 10240; // buf长度
 	char* buf = new char[bufLen];
-	int rowNo = 1; // 行号从0开始
+	int rowNo = 1; // 行号从1开始
 	while (!fileStream.eof())
 	{
 		fileStream.getline(buf,bufLen);
