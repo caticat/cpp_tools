@@ -62,7 +62,7 @@ public:
 	void Write(uint16 pos,const T t); // 在某个位置写入某个数据
 
 private:
-	void _WriteData(const void* pData,uint16 dataLen); // 写数据
+	inline void _WriteData(const void* pData,uint16 dataLen); // 写数据
 
 private:
 	std::string m_msg; // 数据
