@@ -54,8 +54,9 @@ public:
 
 	template <typename T>
 	void Write(const T t); // 写入某个类型的数据
+	inline void Write(const std::string& t); // 字符串特例化
 	template <typename T>
-	PMsg& operator<<(const T t); // 写入某个类型的数据
+	PMsg& operator<<(const T& t); // 写入某个类型的数据
 
 	template <typename T>
 	void Write(uint16 pos,const T t); // 在某个位置写入某个数据
@@ -121,8 +122,7 @@ void PMsg::Write <const char*> (const char* t) // 字符串写入特例化
 		_WriteData(t,sLen);
 }
 
-template<>
-void PMsg::Write <std::string> (std::string t) // 字符串写入特例化
+void PMsg::Write(const std::string& t) // 字符串写入特例化
 {
 	uint16 sLen = (uint16)t.length();
 	Write(sLen);
@@ -131,7 +131,7 @@ void PMsg::Write <std::string> (std::string t) // 字符串写入特例化
 }
 
 template <typename T>
-PMsg& PMsg::operator<<(const T t)
+PMsg& PMsg::operator<<(const T& t)
 {
 	Write(t);
 	return *this;
